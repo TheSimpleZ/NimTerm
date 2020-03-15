@@ -1,0 +1,5 @@
+{
+    "files.autoSave": "afterDelay",
+    "nim.buildOnSave": false,
+    "editor.formatOnSave": true
+}
