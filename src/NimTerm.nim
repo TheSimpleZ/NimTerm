@@ -13,22 +13,14 @@ let myPty = newPty("/bin/sh")
 
 chan.open()
 
+# Write data to terminal as bytes
 onData(myPty, proc (c: char) = chan.send("terminal.write(new Uint8Array([" &
         $byte(c) & "]));"))
-
-# var bgThread: Thread[Webview]
-# proc bg (wvv: Webview) {.thread.} =
-#     chan.send("terminal.write('Hello');")
-
-# createThread bgThread, bg, wv
 
 
 wv.bindProcs"pty":
     proc write(s: string) =
-        let msg = cstring(s & '\n')
-        checkErrorCode write(myPty.master.getOsFileHandle(), msg, msg.len)
-
-
+        myPty.write(s)
 
 
 while wv.loop(1) == 0:
