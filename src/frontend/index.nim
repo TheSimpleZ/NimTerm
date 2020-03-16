@@ -5,28 +5,17 @@ import jslibs / xtermjs
 
 const term_id = kstring"terminal"
 var terminal{.exportc.}: JsObject
+var fitaddon{.exportc.}: JsObject
 var pty {.importjs.}: JsObject
 
 
 proc xterm(): VNode =
-  let style = style(
-      (StyleAttr.width, kstring"100%"),
-      (StyleAttr.height, kstring"95vh"),
-  )
   result = buildHtml:
-    tdiv(id = term_id, style = style)
+    tdiv(id = term_id)
 
 proc inputField(): VNode =
-  let style = style(
-    (StyleAttr.width, kstring"100%"),
-    (StyleAttr.height, kstring"5vh"),
-    (StyleAttr.borderRadius, kstring"0"),
-    (StyleAttr.border, kstring"0"),
-    (StyleAttr.backgroundColor, kstring"black"),
-    (StyleAttr.color, kstring"white")
-  )
   result = buildHtml:
-    input(style = style):
+    input():
       proc onkeyupenter(ev: Event, target: VNode) =
         pty.write(target.text)
         target.text = ""
@@ -35,7 +24,10 @@ proc postRender() =
   if terminal == nil:
     let thediv = getElementById(term_id)
     terminal = newTerminal()
+    fitaddon = newFitAddon()
+    terminal.loadAddon(fitaddon)
     terminal.open(thediv)
+    fitaddon.fit()
 
 proc createDom(): VNode =
   result = buildHtml(tdiv):
