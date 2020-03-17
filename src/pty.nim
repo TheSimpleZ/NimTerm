@@ -1,5 +1,5 @@
 # forkpty reimplementation
-import os, posix, asyncdispatch, threadpool, sugar
+import os, posix, threadpool
 
 type
   Pty* = object
@@ -79,6 +79,7 @@ proc newPty*(process: string, rows: uint16 = 20, columns: uint16 = 20,
     quit(1)
 
 when isMainModule:
+  import asyncdispatch, sugar
   # Helper function which allows us to raed lines from a file in an async manner.
   proc asyncReadline(f: File): Future[string] =
     let event = newAsyncEvent()
