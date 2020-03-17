@@ -23,7 +23,7 @@ const dataUrl* = &"""data:text/html,
     {css}
 </style>
 </head>
-<body id="body" onresize="fitaddon.fit()">
+<body id="body" onresize="onBodyResize();">
     <div id="ROOT"">
     </div>
     <script>

@@ -8,6 +8,12 @@ var terminal{.exportc.}: JsObject
 var fitaddon{.exportc.}: JsObject
 var pty {.importjs.}: JsObject
 
+proc onBodyResize() {.exportc.} =
+  let newSize = fitaddon.fit()
+  if cast[bool](pty):
+    pty.setRows(newSize.rows)
+    pty.setColumns(newSize.cols)
+
 
 proc xterm(): VNode =
   result = buildHtml:
@@ -27,7 +33,6 @@ proc postRender() =
     fitaddon = newFitAddon()
     terminal.loadAddon(fitaddon)
     terminal.open(thediv)
-    fitaddon.fit()
 
 proc createDom(): VNode =
   result = buildHtml(tdiv):

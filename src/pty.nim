@@ -5,7 +5,7 @@ type
   Pty* = object
     master: File
     windowSize*: WindowSize
-  WindowSize = object
+  WindowSize* = ref object
     rows*: cushort    # rows, in characters
     columns*: cushort # columns, in characters
     width*: cushort   # horizontal size, pixels
@@ -22,17 +22,25 @@ proc grantpt(fd: cint): cint {.importc.}
 proc ptsname(fd: cint): cstring {.importc.}
 
 
+
 proc applyNewWindowSize*(pty: Pty) =
   const TIOCSWINSZ = 21524
-  var ptyForAddr = pty.windowSize
-  checkErrorCode ioctl(pty.master.getOsFileHandle(), TIOCSWINSZ,
-      addr ptyForAddr)
+  checkErrorCode ioctl(pty.master.getOsFileHandle(), TIOCSWINSZ, pty.windowSize)
 
 proc onData*(pty: Pty, cb: proc(c: char)) =
   proc readCharBackground(pty: Pty, cb: proc(c: char)) =
     while true:
       cb pty.master.readChar()
   spawn readCharBackground(pty, cb)
+
+proc onData*(pty: Pty, cb: proc(c: openArray[byte], len: int)) =
+  proc readByteBackground(pty: Pty, cb: proc(c: openArray[byte], len: int)) =
+    while true:
+      var data: array[0..5, uint8]
+      let readLen = pty.master.readBytes(data, 0, 5)
+      echo readLen
+      cb data, readLen
+  spawn readByteBackground(pty, cb)
 
 proc write*(pty: Pty, s: string) =
   let msg = cstring(s & '\n')
@@ -102,10 +110,13 @@ when isMainModule:
       checkErrorCode write(master.getOsFileHandle(), msg, msg.len)
       inputFuture = stdin.asyncReadline()
 
+  proc cb(bs: openArray[byte], len: int) =
+    for b in bs[0..len]:
+      echo char(b)
 
   let pty = newPty("/bin/sh")
   sleep(100)
 
-  onData(pty, (c: char) => stdout.write c)
+  onData(pty, cb)
   asyncCheck stdinToMaster(pty.master)
   runForever()

@@ -1,9 +1,9 @@
 import webview
 import gui
 import os, asyncdispatch, threadpool
-import pty, posix
+import pty, posix, sequtils, marshal
 
-var chan: Channel[string]
+var chan: Channel[byte]
 let wv = newWebView(title = "NimTerm", url = dataUrl,
 width = 1000,
 height = 700, resizable = true, debug = true, cb = nil)
@@ -14,18 +14,29 @@ let myPty = newPty("/bin/bash")
 chan.open()
 
 # Write data to terminal as bytes
-onData(myPty, proc (c: char) = chan.send($byte(c)))
+onData(myPty, proc (c: char) = chan.send(byte(c)))
 
 
 wv.bindProcs"pty":
     proc write(s: string) =
         myPty.write(s)
+    proc setRows(rows: uint16) =
+        myPty.windowSize.rows = rows
+        myPty.applyNewWindowSize()
+    proc setColumns(cols: uint16) =
+        myPty.windowSize.columns = cols
+        myPty.applyNewWindowSize()
 
+discard wv.eval("onBodyResize();")
 
 while wv.loop(0) == 0:
-    let tried = chan.tryRecv()
-    if tried.dataAvailable:
-        discard wv.eval("terminal.write(new Uint8Array([" & tried.msg &
-                "]));") # "Another message"
+    var tried = chan.tryRecv()
+    var totalMsg: seq[byte]
+    while tried.dataAvailable and totalMsg.len < 4000:
+        totalMsg = totalMsg & tried.msg
+        tried = chan.tryRecv()
+
+    discard wv.eval("terminal.write(" & $$totalMsg &
+            ");") # "Another message"
 
 

@@ -19,6 +19,7 @@ var FitAddon = (function() {
       core._renderService.clear();
       this._terminal.resize(dims.cols, dims.rows);
     }
+    return dims;
   };
   FitAddon.prototype.proposeDimensions = function() {
     if (!this._terminal) {
