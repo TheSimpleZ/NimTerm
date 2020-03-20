@@ -33,18 +33,16 @@ proc onData*(pty: Pty, cb: proc(c: char)) =
       cb pty.master.readChar()
   spawn readCharBackground(pty, cb)
 
-proc onData*(pty: Pty, cb: proc(c: openArray[byte], len: int)) =
-  proc readByteBackground(pty: Pty, cb: proc(c: openArray[byte], len: int)) =
-    while true:
-      var data: array[0..5, uint8]
-      let readLen = pty.master.readBytes(data, 0, 5)
-      echo readLen
-      cb data, readLen
-  spawn readByteBackground(pty, cb)
+proc write*(pty: Pty, s: cstring) =
+  checkErrorCode write(pty.master.getOsFileHandle(), s, s.len)
 
-proc write*(pty: Pty, s: string) =
+proc writeln*(pty: Pty, s: string) =
   let msg = cstring(s & '\n')
   checkErrorCode write(pty.master.getOsFileHandle(), msg, msg.len)
+
+proc write*(pty: Pty, s: char) =
+  var msg = s
+  checkErrorCode write(pty.master.getOsFileHandle(), addr msg, 1)
 
 proc openMasterFile(): File =
   # Standard unix 98 pty
@@ -89,11 +87,11 @@ proc newPty*(process: string, rows: uint16 = 20, columns: uint16 = 20,
 when isMainModule:
   import asyncdispatch, sugar
   # Helper function which allows us to raed lines from a file in an async manner.
-  proc asyncReadline(f: File): Future[string] =
+  proc asyncReadchar(f: File): Future[char] =
     let event = newAsyncEvent()
-    let future = newFuture[string]("asyncReadline")
-    proc readlineBackground(event: AsyncEvent, f: File): string =
-      result = f.readline()
+    let future = newFuture[char]("asyncReadline")
+    proc readlineBackground(event: AsyncEvent, f: File): char =
+      result = f.readchar()
       event.trigger()
     let flowVar = spawn readlineBackground(event, f)
     proc callback(fd: AsyncFD): bool =
@@ -103,20 +101,23 @@ when isMainModule:
     return future
 
   proc stdinToMaster(master: File) {.async.} =
-    var inputFuture: Future[string] = stdin.asyncReadline()
+    var inputFuture: Future[char] = stdin.asyncReadchar()
     while true:
       let input = await inputFuture
-      let msg = cstring(input & '\n')
-      checkErrorCode write(master.getOsFileHandle(), msg, msg.len)
-      inputFuture = stdin.asyncReadline()
+      var msg = byte(input)
+      checkErrorCode write(master.getOsFileHandle(), addr msg, 1)
+      inputFuture = stdin.asyncReadchar()
 
-  proc cb(bs: openArray[byte], len: int) =
-    for b in bs[0..len]:
-      echo char(b)
+  proc onStdIn*(cb: proc(c: char)) =
+    proc readCharBackground(cb: proc(c: char)) =
+      while true:
+        cb stdin.readChar()
+    spawn readCharBackground(cb)
 
-  let pty = newPty("/bin/sh")
+  let pty = newPty("/bin/bash")
   sleep(100)
 
-  onData(pty, cb)
-  asyncCheck stdinToMaster(pty.master)
-  runForever()
+  onData(pty, (c: char) => stdout.write c)
+  onStdIn((c: char) => pty.write c)
+  while true:
+    discard

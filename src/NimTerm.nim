@@ -20,6 +20,8 @@ onData(myPty, proc (c: char) = chan.send(byte(c)))
 wv.bindProcs"pty":
     proc write(s: string) =
         myPty.write(s)
+    proc writeln(s: string) =
+        myPty.writeln(s)
     proc setRows(rows: uint16) =
         myPty.windowSize.rows = rows
         myPty.applyNewWindowSize()
