@@ -1,5 +1,5 @@
 # forkpty reimplementation
-import os, posix, threadpool
+import os, posix, threadpool, terminal
 
 type
   Pty* = object
@@ -33,6 +33,12 @@ proc onData*(pty: Pty, cb: proc(c: char)) =
       cb pty.master.readChar()
   spawn readCharBackground(pty, cb)
 
+
+
+proc write*(pty: Pty, s: char) =
+  var msg = s
+  checkErrorCode write(pty.master.getOsFileHandle(), addr msg, 1)
+
 proc write*(pty: Pty, s: cstring) =
   checkErrorCode write(pty.master.getOsFileHandle(), s, s.len)
 
@@ -40,9 +46,8 @@ proc writeln*(pty: Pty, s: string) =
   let msg = cstring(s & '\n')
   checkErrorCode write(pty.master.getOsFileHandle(), msg, msg.len)
 
-proc write*(pty: Pty, s: char) =
-  var msg = s
-  checkErrorCode write(pty.master.getOsFileHandle(), addr msg, 1)
+proc eraseLine*(pty: Pty) =
+  pty.write("\e[2K")
 
 proc openMasterFile(): File =
   # Standard unix 98 pty
@@ -108,16 +113,21 @@ when isMainModule:
       checkErrorCode write(master.getOsFileHandle(), addr msg, 1)
       inputFuture = stdin.asyncReadchar()
 
-  proc onStdIn*(cb: proc(c: char)) =
-    proc readCharBackground(cb: proc(c: char)) =
-      while true:
-        cb stdin.readChar()
-    spawn readCharBackground(cb)
-
   let pty = newPty("/bin/bash")
+  proc onStdIn*() =
+    proc readCharBackground() =
+      while true:
+        let input = stdin.readChar()
+        if input == 'c':
+          pty.write("\e[2K")
+        else:
+          # pty.master.eraseLine()
+          pty.write(input)
+    spawn readCharBackground()
+
   sleep(100)
 
   onData(pty, (c: char) => stdout.write c)
-  onStdIn((c: char) => pty.write c)
+  onStdIn()
   while true:
     discard

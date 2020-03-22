@@ -28,6 +28,8 @@ wv.bindProcs"pty":
     proc setColumns(cols: uint16) =
         myPty.windowSize.columns = cols
         myPty.applyNewWindowSize()
+    proc eraseLine() =
+        myPty.eraseLine()
 
 discard wv.eval("onBodyResize();")
 
@@ -38,7 +40,7 @@ while wv.loop(0) == 0:
         totalMsg = totalMsg & tried.msg
         tried = chan.tryRecv()
 
-    discard wv.eval("terminal.write(" & $$totalMsg &
-            ");") # "Another message"
+    if totalMsg.len > 0:
+        discard wv.eval("xtermWrite(" & $$totalMsg & ");")
 
 
