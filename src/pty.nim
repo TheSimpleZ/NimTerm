@@ -46,8 +46,8 @@ proc writeln*(pty: Pty, s: string) =
   let msg = cstring(s & '\n')
   checkErrorCode write(pty.master.getOsFileHandle(), msg, msg.len)
 
-proc eraseLine*(pty: Pty) =
-  pty.write("\e[2K")
+proc backspace*(pty: Pty, repeat: int = 1) =
+  for i in 0..repeat: pty.write('\b')
 
 proc openMasterFile(): File =
   # Standard unix 98 pty

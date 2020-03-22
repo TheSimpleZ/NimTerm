@@ -22,14 +22,14 @@ wv.bindProcs"pty":
         myPty.write(s)
     proc writeln(s: string) =
         myPty.writeln(s)
+    proc backspace(repeat: int) =
+        myPty.backspace(repeat)
     proc setRows(rows: uint16) =
         myPty.windowSize.rows = rows
         myPty.applyNewWindowSize()
     proc setColumns(cols: uint16) =
         myPty.windowSize.columns = cols
         myPty.applyNewWindowSize()
-    proc eraseLine() =
-        myPty.eraseLine()
 
 discard wv.eval("onBodyResize();")
 

@@ -21,14 +21,16 @@ proc autocomplete(target: VNode, s: kstring) {.async, discardable.} =
   currentLine = ""
   if lastCompletion == s:
     pty.write(s & "\t\t")
+    target.setInputText(s)
+    await sleep(100)
   else:
     pty.write(s & "\t")
-  await sleep(100)
-  let backlen = ceil currentLine.len/2
-  let backspaces = repeat('\b', int backlen)
-  pty.write(backspaces)
-  terminal.write(backspaces)
-  target.setInputText(currentLine)
+    await sleep(100)
+    target.setInputText(currentLine)
+  let backspaceCount = currentLine.len
+  pty.backspace(backspaceCount)
+  for i in 0..backspaceCount:
+    terminal.write('\b')
   lastCompletion = currentLine
   currentLine = ""
   expanded = true
