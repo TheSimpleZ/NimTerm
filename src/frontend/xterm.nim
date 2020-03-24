@@ -18,7 +18,7 @@ proc onBodyResize() {.exportc.} =
     pty.setColumns(newSize.cols)
 
 var currentLine*: kstring = ""
-var outputEnabled = true
+var outputEnabled* = true
 proc xtermWrite(bytes: openarray[byte]) {.exportc.} =
   if outputEnabled:
     terminal.write(bytes)

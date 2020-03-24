@@ -5,13 +5,11 @@ import jslibs / xtermjs
 
 var pty {.importjs.}: JsObject
 
-var expanded = false
 var lastCompletion: kstring = ""
 
 proc onkeyupenter(ev: Event, target: VNode) =
   pty.writeln(target.text)
   target.text = ""
-  expanded = false
   lastCompletion = ""
 
 proc sleep(ms: int): Future[void] =
@@ -24,18 +22,16 @@ proc autocomplete(target: VNode, s: kstring) {.async, discardable.} =
     target.setInputText(s)
     await sleep(100)
   else:
+    outputEnabled = false
     pty.write(s & "\t")
     await sleep(100)
     target.setInputText(currentLine)
+    lastCompletion = currentLine
   let backspaceCount = currentLine.len
   pty.backspace(backspaceCount)
-  for i in 0..backspaceCount:
-    terminal.write('\b')
-  lastCompletion = currentLine
+  if lastCompletion != s: await sleep(100)
+  outputEnabled = true
   currentLine = ""
-  expanded = true
-  # pty.eraseLine()
-  # eraseLine()
 
 proc onkeydown(ev: Event, target: VNode) =
   let kbev = (KeyboardEvent)ev
